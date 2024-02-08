@@ -1,19 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"urlShrtGo/controllers"
 	"urlShrtGo/models"
 )
 
-func pingHandler(res http.ResponseWriter, req *http.Request) {
-	fmt.Fprint(res, "pong")
-}
-
 func main() {
 
-	http.HandleFunc("/ping", pingHandler)
+	http.HandleFunc("/ping", controllers.PingHandler)
 	// models
 	models.ConnectDB()
 
