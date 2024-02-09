@@ -10,6 +10,7 @@ import (
 func main() {
 
 	http.HandleFunc("/ping", controllers.PingHandler)
+	http.HandleFunc("/login", controllers.LoginHandler)
 	// models
 	models.ConnectDB()
 

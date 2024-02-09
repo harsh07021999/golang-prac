@@ -8,6 +8,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var DB *sqlx.DB
+
 func ConnectDB() {
 	// os.Getenv("DB")
 	env, err := godotenv.Read(".env")
@@ -22,11 +24,12 @@ func ConnectDB() {
 	if err != nil {
 		log.Fatal("Error connecting DB", err)
 	}
-	defer db.Close()
+	DB = db
+	// defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Println("Successfuly connected")
-	}
+	// if err := db.Ping(); err != nil {
+	// 	log.Fatal(err)
+	// } else {
+	// 	log.Println("Successfuly connected")
+	// }
 }
