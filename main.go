@@ -11,6 +11,8 @@ func main() {
 
 	http.HandleFunc("/ping", controllers.PingHandler)
 	http.HandleFunc("/login", controllers.LoginHandler)
+	http.HandleFunc("/signup", controllers.SignupHandler)
+	http.HandleFunc("/user", controllers.GetEmail)
 	// models
 	models.ConnectDB()
 
