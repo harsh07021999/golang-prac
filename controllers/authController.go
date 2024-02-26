@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"urlShrtGo/dtos"
 	"urlShrtGo/filter"
 	"urlShrtGo/models"
+	"urlShrtGo/util"
 )
 
 func LoginHandler(res http.ResponseWriter, req *http.Request) {
@@ -20,16 +20,14 @@ func LoginHandler(res http.ResponseWriter, req *http.Request) {
 	var login dtos.LoginRequest
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&login); err != nil {
-		log.Fatal("Json decode error", err)
+		util.Error.Println("Json decode error", err)
 	}
 	defer req.Body.Close()
-
-	fmt.Println(login.Name, login.Password)
 
 	tokenString, err := filter.CreateToken(login.Name)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		log.Fatal(err)
+		util.Error.Println(err)
 	}
 	var loginToken dtos.LoginResponse
 	loginToken.Token = tokenString
@@ -50,9 +48,9 @@ func SignupHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	fmt.Println(signUp.Name)
-	fmt.Println(signUp.Email)
-	fmt.Println(signUp.Password)
+	util.Debug.Println(signUp.Name)
+	util.Debug.Println(signUp.Email)
+	util.Debug.Println(signUp.Password)
 
 	if _, err := models.DB.NamedExec("INSERT INTO users (name, email, password) VALUES(:name, :email, :password)", signUp); err != nil {
 		log.Fatal("Database query error", err)

@@ -7,6 +7,7 @@ import (
 	"urlShrtGo/dtos"
 	"urlShrtGo/filter"
 	"urlShrtGo/models"
+	"urlShrtGo/util"
 )
 
 func GetEmail(res http.ResponseWriter, req *http.Request) {
@@ -19,18 +20,11 @@ func GetEmail(res http.ResponseWriter, req *http.Request) {
 	tokenString := req.Header.Get("token")
 
 	if err := filter.VerifyToken(tokenString); err != nil {
-		log.Fatal("Token verification filed", err)
-		http.Error(res, "Token verification filed", http.StatusUnauthorized)
+		util.Error.Println(res, "Token verification filed as :- ", http.StatusUnauthorized)
+		res.Write([]byte(err.Error()))
+		return
 	}
-
-	// var ureq dtos.UserRequest
 	var name = req.URL.Query().Get("name")
-	// decoder := json.NewDecoder(req.Body)
-	// if err := decoder.Decode(&ureq); err != nil {
-	// 	log.Fatal("Json decode failed", err)
-	// 	http.Error(res, "Invalid JSON format", http.StatusBadRequest)
-	// }
-	// defer req.Body.Close()
 
 	var email []string
 	err := models.DB.Select(&email, "SELECT email FROM users WHERE name = $1", name)
