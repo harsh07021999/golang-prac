@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"urlShrtGo/dtos"
@@ -51,18 +54,32 @@ func PostRealUrl(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
+	var domain = "http://localhost/"
+
 	if !util.CheckEmptyOrBlankString(shortReq.CustomHash) {
-		var oldhash []string
-		err := models.DB.Select(&oldhash, "SELECT hash FROMurlhash where hash = $1", shortReq.CustomHash)
+		var oldhash []string = nil
+		err := models.DB.Select(&oldhash, "SELECT hash FROM urlhash where hash = $1", shortReq.CustomHash)
 		if err != nil {
 			util.Error.Fatal("DB query failed", err)
-			http.Error(res, "INternal Server Error", http.StatusInternalServerError)
+			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 		}
 		if oldhash == nil {
-
+			if _, err := models.DB.NamedExec("INSERT INTO urlhash (hash, url, uid) VALUES(:name, :email, :password)", shortReq.CustomHash); err != nil {
+				util.Error.Println("Database query error", err)
+			}
 		}
+	} else {
+		constHashSize := 8
+		salt := make([]byte, 16)
+		rand.Read(salt)
+		data := append([]byte(shortReq.OriginalUrl), salt...)
+		hash := sha256.New()
+		hash.Write(data)
+		hashedbytes := hash.Sum(nil)
+		constLenHash := hex.EncodeToString(hashedbytes[:constHashSize/2])
+		util.Debug.Println(constLenHash)
+		domain = domain + constLenHash
 	}
-
-	json.NewEncoder(res).Encode("")
+	json.NewEncoder(res).Encode(domain)
 
 }

@@ -14,7 +14,7 @@ var secretKey = []byte("JWT secret key")
 func CreateToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"username": username,
-		"exp":      time.Now().Add(time.Minute * 1).Unix(),
+		"exp":      time.Now().Add(time.Minute * 10).Unix(),
 	})
 
 	tokenString, err := token.SignedString(secretKey)
