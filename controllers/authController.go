@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,6 +10,11 @@ import (
 	"urlShrtGo/models"
 	"urlShrtGo/util"
 )
+
+type LoginBO struct {
+	password string
+	id       int64
+}
 
 func LoginHandler(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
@@ -24,12 +30,46 @@ func LoginHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	tokenString, err := filter.CreateToken(login.Name)
+	var stored LoginBO
+
+	stmt, err := models.DB.Prepare("SELECT password, id FROM users WHERE name = $1 ")
+	if err != nil {
+		log.Fatal("DB query failed", err)
+		http.Error(res, "INternal Server Error", http.StatusInternalServerError)
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(login.Name).Scan(&stored.password, &stored.id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			util.Error.Println("Error :- ", err)
+			http.Error(res, "Invalid username or password", http.StatusUnauthorized)
+			return
+		} else {
+			util.Error.Println("Error :- ", err)
+			http.Error(res, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if stored.password != login.Password {
+		http.Error(res, "Invalid username or password", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString, err := filter.CreateToken(stored.id)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		util.Error.Println(err)
 	}
+
 	var loginToken dtos.LoginResponse
+	loginToken.Token = tokenString
+	util.Debug.Println(filter.GetTokenId(tokenString))
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		util.Error.Println(err)
+	}
 	loginToken.Token = tokenString
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(loginToken)

@@ -6,11 +6,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"urlShrtGo/dtos"
 	"urlShrtGo/filter"
 	"urlShrtGo/models"
 	"urlShrtGo/util"
 )
+
+type HashReq struct {
+	Hash string `db:"hash"`
+	URL  string `db:"url"`
+	UID  int64  `db:"uid"`
+}
 
 func GetRealUrl(res http.ResponseWriter, req *http.Request) {
 
@@ -22,11 +29,11 @@ func GetRealUrl(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var urlHash = req.URL.Path
+	var urlHash = strings.Split(req.URL.Path, "/")[1]
 
 	var url []string
 
-	err := models.DB.Select(&url, "SELECT url from urlmap where hash = #1", urlHash)
+	err := models.DB.Select(&url, "SELECT url from urlhash where hash = $1", urlHash)
 	if err != nil {
 		util.Error.Println("Error fetching url ", err)
 		var errString = "Error fetching url " + err.Error()
@@ -54,17 +61,25 @@ func PostRealUrl(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	var domain = "http://localhost/"
+	id, err := filter.GetTokenId(tokenString)
+	if err != nil {
+		util.Error.Println(err.Error())
+	}
 
 	if !util.CheckEmptyOrBlankString(shortReq.CustomHash) {
-		var oldhash []string = nil
+		var oldhash []string
 		err := models.DB.Select(&oldhash, "SELECT hash FROM urlhash where hash = $1", shortReq.CustomHash)
 		if err != nil {
 			util.Error.Fatal("DB query failed", err)
 			http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 		}
 		if oldhash == nil {
-			if _, err := models.DB.NamedExec("INSERT INTO urlhash (hash, url, uid) VALUES(:name, :email, :password)", shortReq.CustomHash); err != nil {
+			var datas HashReq
+			datas.UID = int64(id)
+			datas.URL = shortReq.OriginalUrl
+			datas.Hash = shortReq.CustomHash
+
+			if _, err := models.DB.NamedExec("INSERT INTO urlhash (hash, url, uid) VALUES(:hash, :url, :uid)", &datas); err != nil {
 				util.Error.Println("Database query error", err)
 			}
 		}
@@ -78,8 +93,16 @@ func PostRealUrl(res http.ResponseWriter, req *http.Request) {
 		hashedbytes := hash.Sum(nil)
 		constLenHash := hex.EncodeToString(hashedbytes[:constHashSize/2])
 		util.Debug.Println(constLenHash)
-		domain = domain + constLenHash
+
+		var datas HashReq
+		datas.UID = int64(id)
+		datas.URL = shortReq.OriginalUrl
+		datas.Hash = constLenHash
+
+		if _, err := models.DB.NamedExec("INSERT INTO urlhash (hash, url, uid) VALUES(:hash, :url, :uid)", &datas); err != nil {
+			util.Error.Println("Database query error", err)
+		}
+		json.NewEncoder(res).Encode(datas.Hash)
 	}
-	json.NewEncoder(res).Encode(domain)
 
 }
